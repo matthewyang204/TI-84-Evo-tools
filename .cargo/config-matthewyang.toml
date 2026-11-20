@@ -1,5 +1,5 @@
 [env]
-QMAKE = "/opt/matthewyang/Qt/6.5.3/macos/bin/qmake"
+QMAKE = { "/opt/matthewyang/Qt/6.5.3/macos/bin/qmake", force = true }
 AR_aarch64_apple_darwin = "/usr/bin/ar"
 RANLIB_aarch64_apple_darwin = "/usr/bin/ranlib"
 AR_x86_64_apple_darwin = "/usr/bin/ar"
