@@ -778,7 +778,7 @@ Controls.ApplicationWindow {
                     }
 
                     Controls.Button {
-                        text: qsTr("Ramify")
+                        text: qsTr("RAMify")
                         enabled: !backend.busy && deviceFilesPage.selectedFilesNeedTarget(false)
                         onClicked: deviceFilesPage.moveSelectedFiles(false)
                     }
@@ -891,7 +891,7 @@ Controls.ApplicationWindow {
 
                                 Controls.Button {
                                     Layout.minimumWidth: implicitWidth
-                                    text: qsTr("Ramify")
+                                    text: qsTr("RAMify")
                                     font.pixelSize: 12
                                     leftPadding: 6
                                     rightPadding: 6
