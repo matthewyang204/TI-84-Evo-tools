@@ -25,13 +25,21 @@ if [[ " $* " == *" --deploy-oem204 "* ]]; then
     cp .cargo/config-macos-matthewyang.toml .cargo/config.toml
 fi
 
+echo "Compiling program..."
 cargo bundle --release
 macdeployqt target/release/bundle/osx/ti-evo-tools.app -qmldir=./qml -always-overwrite
 
 mkdir -p $OLDPWD/target/bundle
+rm -rf $OLDPWD/target/bundle/ti-evo-tools.app
 cp -r target/release/bundle/osx/ti-evo-tools.app $OLDPWD/target/bundle/
 cd -
+echo "Built and staged to target/bundle/ti-evo-tools.app!"
+
+printf "Cleaning up..."
+rm -rf $TEMPDIR
+echo "done"
 
 if [[ " $* " == *" --run "* ]]; then
+    echo "Running program..."
     target/bundle/ti-evo-tools.app/Contents/MacOS/ti-evo-tools
 fi
