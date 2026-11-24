@@ -369,6 +369,7 @@ Controls.ApplicationWindow {
             id: deviceFilesPage
             title: qsTr("Device Files")
             property var deviceFiles: []
+            property bool refreshPending: false
 
             function loadDeviceFiles() {
                 try {
@@ -378,10 +379,28 @@ Controls.ApplicationWindow {
                 }
             }
 
+            function refreshWhenReady() {
+                if (refreshPending && !backend.busy) {
+                    refreshPending = false
+                    backend.refreshFiles()
+                }
+            }
+
+            Component.onCompleted: {
+                loadDeviceFiles()
+                refreshPending = true
+                refreshWhenReady()
+            }
+
             Connections {
                 target: backend
                 function onFilesJsonChanged() {
                     deviceFilesPage.loadDeviceFiles()
+                }
+                function onBusyChanged() {
+                    if (!backend.busy) {
+                        deviceFilesPage.refreshWhenReady()
+                    }
                 }
             }
 
