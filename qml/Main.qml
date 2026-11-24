@@ -561,7 +561,7 @@ Controls.ApplicationWindow {
                 onAccepted: {
                     const path = root.localPathFromUrl(selectedFile)
                     sendDialog.close()
-                    backend.uploadFile(path)
+                    backend.uploadFile(path, sendDestination.currentIndex === 1)
                 }
             }
 
@@ -580,6 +580,17 @@ Controls.ApplicationWindow {
                         Layout.fillWidth: true
                         text: qsTr("Choose an EVO file or send the current clipboard contents as a variable.")
                         wrapMode: Text.WordWrap
+                    }
+
+                    Controls.Label {
+                        text: qsTr("Destination")
+                    }
+
+                    Controls.ComboBox {
+                        id: sendDestination
+                        Layout.fillWidth: true
+                        model: [qsTr("RAM"), qsTr("Archive")]
+                        currentIndex: 0
                     }
 
                     Controls.Button {
@@ -629,7 +640,8 @@ Controls.ApplicationWindow {
                                 clipboardVariableType.currentIndex].value
                             sendDialog.close()
                             backend.sendClipboard(clipboardVariableName.text,
-                                                  selectedType)
+                                                  selectedType,
+                                                  sendDestination.currentIndex === 1)
                         }
                     }
                 }
@@ -919,13 +931,27 @@ Controls.ApplicationWindow {
                     placeholderText: qsTr("No host file selected")
                 }
 
+                Controls.Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Destination")
+                }
+
+                Controls.ComboBox {
+                    id: sendPageDestination
+                    Layout.fillWidth: true
+                    model: [qsTr("RAM"), qsTr("Archive")]
+                    currentIndex: 0
+                    enabled: !backend.busy
+                }
+
                 Controls.Button {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 48
                     text: qsTr("Send to Device")
                     icon.name: "document-send"
                     enabled: sendFilePage.selectedPath.length > 0 && !backend.busy
-                    onClicked: backend.uploadFile(sendFilePage.selectedPath)
+                    onClicked: backend.uploadFile(sendFilePage.selectedPath,
+                                                  sendPageDestination.currentIndex === 1)
                 }
 
                 Controls.BusyIndicator {
@@ -952,7 +978,7 @@ Controls.ApplicationWindow {
 
         onDropped: function(drop) {
             if (backend.busy || drop.urls.length === 0) return
-            backend.uploadFile(root.localPathFromUrl(drop.urls[0]))
+            backend.uploadFile(root.localPathFromUrl(drop.urls[0]), false)
             drop.acceptProposedAction()
         }
     }

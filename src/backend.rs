@@ -33,7 +33,7 @@ pub mod ffi {
 
         #[qinvokable]
         #[cxx_name = "uploadFile"]
-        fn upload_file(self: Pin<&mut Self>, path: &QString);
+        fn upload_file(self: Pin<&mut Self>, path: &QString, archived: bool);
 
         #[qinvokable]
         #[cxx_name = "deleteFile"]
@@ -69,6 +69,7 @@ pub mod ffi {
             self: Pin<&mut Self>,
             display_name: &QString,
             kind: i32,
+            archived: bool,
         );
     }
 
@@ -169,7 +170,7 @@ impl ffi::CaptureBackend {
         });
     }
 
-    pub fn upload_file(mut self: Pin<&mut Self>, path: &QString) {
+    pub fn upload_file(mut self: Pin<&mut Self>, path: &QString, archived: bool) {
         if *self.busy() {
             return;
         }
@@ -181,7 +182,7 @@ impl ffi::CaptureBackend {
 
         let qt_thread = cxx_qt::Threading::qt_thread(self.as_ref().get_ref());
         std::thread::spawn(move || {
-            let result = crate::usb::send_host_file(&path);
+            let result = crate::usb::send_host_file_to(&path, archived);
             qt_thread
                 .queue(move |mut backend| {
                     match result {
@@ -393,6 +394,7 @@ impl ffi::CaptureBackend {
         mut self: Pin<&mut Self>,
         display_name: &QString,
         kind: i32,
+        archived: bool,
     ) {
         if *self.busy() {
             return;
@@ -439,7 +441,12 @@ impl ffi::CaptureBackend {
                     clipboard_text.as_bytes(),
                 )
             };
-            let result = variable.and_then(crate::usb::send_variable_file);
+            let result = variable
+                .map(|mut variable| {
+                    variable.archived = archived;
+                    variable
+                })
+                .and_then(crate::usb::send_variable_file);
 
             qt_thread
                 .queue(move |mut backend| {

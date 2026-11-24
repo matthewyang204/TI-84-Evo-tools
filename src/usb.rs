@@ -81,6 +81,12 @@ pub fn send_host_file(path: &std::path::Path) -> Result<String, String> {
     send_host_file_on_interface(path)
 }
 
+pub fn send_host_file_to(path: &std::path::Path, archived: bool) -> Result<String, String> {
+    let mut variable = crate::ti_file::read(path)?;
+    variable.archived = archived;
+    send_variable_file(variable)
+}
+
 pub fn delete_variable(wire_name: &str, kind: u8) -> Result<(), String> {
     if wire_name.is_empty()
         || !wire_name.bytes().all(|byte| {
