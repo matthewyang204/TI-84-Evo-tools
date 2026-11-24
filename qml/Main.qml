@@ -11,7 +11,7 @@ Controls.ApplicationWindow {
     minimumWidth: 420
     minimumHeight: 360
     visible: true
-    title: qsTr("TI Calculator")
+    title: qsTr("TI-84 Evo Calculator Toolbox")
 
     CaptureBackend { id: backend }
     property var pendingUploads: []
@@ -127,7 +127,7 @@ Controls.ApplicationWindow {
 
             Controls.Label {
                 Layout.fillWidth: true
-                text: qsTr("TI Calculator")
+                text: qsTr("TI-84 Evo Calculator Toolbox")
                 font.pixelSize: 22
                 font.bold: true
             }
@@ -218,7 +218,7 @@ Controls.ApplicationWindow {
 
                 Controls.Label {
                     Layout.alignment: Qt.AlignHCenter
-                    text: qsTr("TI Calculator Tools")
+                    text: qsTr("TI-84 Evo Calculator Toolbox")
                     font.pixelSize: 28
                     font.bold: true
                 }
@@ -330,7 +330,7 @@ Controls.ApplicationWindow {
 
                         Controls.Label {
                             Layout.fillWidth: true
-                            text: qsTr("Connect a supported TI calculator over USB.")
+                            text: qsTr("Connect a supported TI-84 Evo calculator over USB.")
                             wrapMode: Text.WordWrap
                             horizontalAlignment: Text.AlignHCenter
                         }
@@ -613,7 +613,7 @@ Controls.ApplicationWindow {
 
             FileDialog {
                 id: sendFromFilesDialog
-                title: qsTr("Choose a TI-84 EVO file")
+                title: qsTr("Choose a file")
                 fileMode: FileDialog.OpenFiles
                 nameFilters: [
                     qsTr("Supported files (*.8xp2 *.8xpy2 *.8mp2 *.py)"),
@@ -641,7 +641,7 @@ Controls.ApplicationWindow {
 
                     Controls.Label {
                         Layout.fillWidth: true
-                        text: qsTr("Choose an EVO file or send the current clipboard contents as a variable.")
+                        text: qsTr("Choose a file or send the current clipboard contents as a variable.")
                         wrapMode: Text.WordWrap
                     }
 
@@ -665,7 +665,7 @@ Controls.ApplicationWindow {
 
                     Controls.Label {
                         Layout.fillWidth: true
-                        text: qsTr("Clipboard text is sent as UTF-8 variable data. Enter its name and choose the matching EVO type. Python source is packaged as type 15; type 18 bytecode must be sent as a native .8mp2 file.")
+                        text: qsTr("Clipboard text is sent as UTF-8 variable data. Enter its name and choose the matching filetype. Python source is packaged as type 15; type 18 bytecode must be sent as a native .8mp2 file.")
                         wrapMode: Text.WordWrap
                     }
 
@@ -682,7 +682,7 @@ Controls.ApplicationWindow {
                     }
 
                     Controls.Label {
-                        text: qsTr("EVO type")
+                        text: qsTr("Filetype")
                     }
 
                     Controls.ComboBox {
@@ -984,7 +984,7 @@ Controls.ApplicationWindow {
 
             FileDialog {
                 id: fileDialog
-                title: qsTr("Choose a TI calculator file")
+                title: qsTr("Choose a file")
                 fileMode: FileDialog.OpenFiles
                 nameFilters: [
                     qsTr("Supported files (*.8xp2 *.8xpy2 *.8mp2 *.py)"),
@@ -1011,7 +1011,7 @@ Controls.ApplicationWindow {
 
                 Controls.Label {
                     Layout.fillWidth: true
-                    text: qsTr("Select a native TI-84 EVO .8xp2 program or a Python .py file. Python filenames must be 1–8 characters, start with a letter, and contain only letters or numbers.")
+                    text: qsTr("Select a native TI-84 Evo .8xp2 program or a Python .py file. Python filenames must be 1–8 characters, start with a letter, and contain only letters or numbers.")
                     wrapMode: Text.WordWrap
                     horizontalAlignment: Text.AlignHCenter
                 }
