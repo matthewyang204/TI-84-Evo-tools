@@ -4,10 +4,9 @@ A native desktop application for working with a TI-84 Evo over USB. It can
 capture the calculator screen, inspect and delete device files, and send
 TI-BASIC or Python programs. The interface is built with standard Qt Quick Controls;
 USB communication, Kermit framing, directory parsing, file conversion, and
-screen decoding are implemented in Rust.
+screen decoding are implemented in Rust for speed and efficiency.
 
-This is an experimental, reverse-engineered project. It is not affiliated with
-or endorsed by Texas Instruments.
+This project is not affiliated with or endorsed by Texas Instruments.
 
 ## Current features
 
