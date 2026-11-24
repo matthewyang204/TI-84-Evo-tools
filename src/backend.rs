@@ -45,6 +45,16 @@ pub mod ffi {
         );
 
         #[qinvokable]
+        #[cxx_name = "setMemoryTarget"]
+        fn set_memory_target(
+            self: Pin<&mut Self>,
+            display_name: &QString,
+            wire_name: &QString,
+            kind: i32,
+            archived: bool,
+        );
+
+        #[qinvokable]
         #[cxx_name = "getFile"]
         fn get_file(
             self: Pin<&mut Self>,
@@ -245,6 +255,59 @@ impl ffi::CaptureBackend {
                         Err(error) => backend
                             .as_mut()
                             .set_status(QString::from(&format!("Delete failed: {error}"))),
+                    }
+                    backend.as_mut().set_busy(false);
+                })
+                .ok();
+        });
+    }
+
+    pub fn set_memory_target(
+        mut self: Pin<&mut Self>,
+        display_name: &QString,
+        wire_name: &QString,
+        kind: i32,
+        archived: bool,
+    ) {
+        if *self.busy() {
+            return;
+        }
+
+        let display_name = display_name.to_string();
+        let wire_name = wire_name.to_string();
+        let kind = match u8::try_from(kind) {
+            Ok(kind) => kind,
+            Err(_) => {
+                self.as_mut().set_status(QString::from(
+                    "Move failed: invalid EVO variable type",
+                ));
+                return;
+            }
+        };
+        let target = if archived { "archive" } else { "RAM" };
+        self.as_mut().set_busy(true);
+        self.as_mut().set_status(QString::from(&format!(
+            "Moving {display_name} to {target}…"
+        )));
+
+        let qt_thread = cxx_qt::Threading::qt_thread(self.as_ref().get_ref());
+        std::thread::spawn(move || {
+            let result = crate::usb::move_variable(&wire_name, kind, archived).and_then(|()| {
+                crate::usb::directory().and_then(|payload| crate::directory::listing(&payload))
+            });
+            qt_thread
+                .queue(move |mut backend| {
+                    match result {
+                        Ok(listing) => {
+                            backend.as_mut().set_files_text(QString::from(&listing.text));
+                            backend.as_mut().set_files_json(QString::from(&listing.files_json));
+                            backend.as_mut().set_status(QString::from(&format!(
+                                "Moved {display_name} to {target}"
+                            )));
+                        }
+                        Err(error) => backend.as_mut().set_status(QString::from(&format!(
+                            "Move failed: {error}"
+                        ))),
                     }
                     backend.as_mut().set_busy(false);
                 })

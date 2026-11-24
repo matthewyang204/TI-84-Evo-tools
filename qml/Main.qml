@@ -15,6 +15,7 @@ Controls.ApplicationWindow {
 
     CaptureBackend { id: backend }
     property var pendingUploads: []
+    property var pendingMemoryMoves: []
 
     function queueUploads(paths, archived) {
         let queued = pendingUploads.slice()
@@ -32,10 +33,30 @@ Controls.ApplicationWindow {
         backend.uploadFile(nextUpload.path, nextUpload.archived)
     }
 
+    function queueMemoryMoves(files, archived) {
+        let queued = pendingMemoryMoves.slice()
+        for (let i = 0; i < files.length; ++i) {
+            queued.push({ file: files[i], archived: archived })
+        }
+        pendingMemoryMoves = queued
+        startNextMemoryMove()
+    }
+
+    function startNextMemoryMove() {
+        if (backend.busy || pendingMemoryMoves.length === 0) return
+        const next = pendingMemoryMoves[0]
+        pendingMemoryMoves = pendingMemoryMoves.slice(1)
+        backend.setMemoryTarget(next.file.name, next.file.wireName,
+                                next.file.type, next.archived)
+    }
+
     Connections {
         target: backend
         function onBusyChanged() {
-            if (!backend.busy) root.startNextUpload()
+            if (!backend.busy) {
+                root.startNextUpload()
+                root.startNextMemoryMove()
+            }
         }
     }
 
@@ -495,6 +516,23 @@ Controls.ApplicationWindow {
                 selectedWireNames = []
             }
 
+            function selectedFilesNeedTarget(archived) {
+                return deviceFiles.some(function(file) {
+                    return selectedWireNames.indexOf(file.wireName) >= 0
+                        && file.wireName.length > 0
+                        && Boolean(file.memory) !== archived
+                })
+            }
+
+            function moveSelectedFiles(archived) {
+                const files = deviceFiles.filter(function(file) {
+                    return selectedWireNames.indexOf(file.wireName) >= 0
+                        && file.wireName.length > 0
+                        && Boolean(file.memory) !== archived
+                })
+                root.queueMemoryMoves(files, archived)
+            }
+
             function deleteNextFile() {
                 if (backend.busy) return
                 if (pendingDeleteIndex < pendingDeleteFiles.length) {
@@ -739,6 +777,18 @@ Controls.ApplicationWindow {
                         }
                     }
 
+                    Controls.Button {
+                        text: qsTr("Ramify")
+                        enabled: !backend.busy && deviceFilesPage.selectedFilesNeedTarget(false)
+                        onClicked: deviceFilesPage.moveSelectedFiles(false)
+                    }
+
+                    Controls.Button {
+                        text: qsTr("Archive")
+                        enabled: !backend.busy && deviceFilesPage.selectedFilesNeedTarget(true)
+                        onClicked: deviceFilesPage.moveSelectedFiles(true)
+                    }
+
                     Item { Layout.fillWidth: true }
 
                     Controls.Button {
@@ -837,6 +887,30 @@ Controls.ApplicationWindow {
                                     onClicked: backend.copyFile(modelData.name,
                                                                modelData.wireName,
                                                                modelData.type)
+                                }
+
+                                Controls.Button {
+                                    Layout.minimumWidth: implicitWidth
+                                    text: qsTr("Ramify")
+                                    font.pixelSize: 12
+                                    leftPadding: 6
+                                    rightPadding: 6
+                                    enabled: modelData.wireName.length > 0
+                                        && Boolean(modelData.memory) && !backend.busy
+                                    onClicked: backend.setMemoryTarget(modelData.name,
+                                        modelData.wireName, modelData.type, false)
+                                }
+
+                                Controls.Button {
+                                    Layout.minimumWidth: implicitWidth
+                                    text: qsTr("Archive")
+                                    font.pixelSize: 12
+                                    leftPadding: 6
+                                    rightPadding: 6
+                                    enabled: modelData.wireName.length > 0
+                                        && !Boolean(modelData.memory) && !backend.busy
+                                    onClicked: backend.setMemoryTarget(modelData.name,
+                                        modelData.wireName, modelData.type, true)
                                 }
 
                                 Controls.Button {

@@ -100,6 +100,40 @@ pub fn delete_variable(wire_name: &str, kind: u8) -> Result<(), String> {
     send_file(&mut connection, &destination, &DELETE_VARIABLE_PAYLOAD)
 }
 
+pub fn move_variable(wire_name: &str, kind: u8, archived: bool) -> Result<(), String> {
+    if wire_name.is_empty()
+        || !wire_name.bytes().all(|byte| {
+            byte.is_ascii_alphanumeric() || matches!(byte, b'%' | b'-' | b'_' | b'.' | b'~')
+        })
+    {
+        return Err("invalid EVO variable name".into());
+    }
+
+    let uri = format!("hh01/xfr/var?name={wire_name}&type={kind}");
+    let mut contents = request_uri(&uri, true, true)?;
+    contents.extend_from_slice(&download_checksum(&contents).to_be_bytes());
+    let memory_target = u8::from(archived);
+    let destination = format!(
+        "hh01/xfr/var?name={wire_name}&type={kind}&memtarget={memory_target}&policy=1"
+    );
+    let mut connection = connect()?;
+    send_file(&mut connection, &destination, &contents)
+}
+
+fn download_checksum(body: &[u8]) -> u16 {
+    if body.len() < 3 {
+        return 0;
+    }
+    let adjusted = body.len() - 3;
+    let mut word_count = adjusted >> 1;
+    if adjusted & 1 != 0 && word_count > 0 {
+        word_count -= 1;
+    }
+    (0..word_count).fold(0u16, |checksum, index| {
+        checksum ^ u16::from_le_bytes([body[index * 2], body[index * 2 + 1]])
+    })
+}
+
 pub fn probe_delete_variable(name: &str, kind: u8) -> Result<(), String> {
     TRACE_USB.store(true, Ordering::Relaxed);
     let wire_name = crate::ti_file::evo_wire_name(name)?;
