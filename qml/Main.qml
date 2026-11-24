@@ -241,7 +241,7 @@ Controls.ApplicationWindow {
                 Controls.Button {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 56
-                    text: qsTr("Check Device Files")
+                    text: qsTr("File Manager")
                     icon.name: "folder"
                     enabled: !backend.busy
                     onClicked: {
