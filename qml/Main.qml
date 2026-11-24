@@ -490,6 +490,7 @@ Controls.ApplicationWindow {
                                 }
 
                                 Controls.Button {
+                                    Layout.rightMargin: 16
                                     text: qsTr("Delete")
                                     icon.name: "edit-delete"
                                     enabled: modelData.wireName.length > 0 && !backend.busy
