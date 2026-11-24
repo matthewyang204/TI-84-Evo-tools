@@ -909,4 +909,14 @@ Controls.ApplicationWindow {
             }
         }
     }
+
+    DropArea {
+        anchors.fill: parent
+
+        onDropped: function(drop) {
+            if (backend.busy || drop.urls.length === 0) return
+            backend.uploadFile(root.localPathFromUrl(drop.urls[0]))
+            drop.acceptProposedAction()
+        }
+    }
 }
