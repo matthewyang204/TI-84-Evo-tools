@@ -28,13 +28,13 @@ fi
 
 echo "Compiling program..."
 cargo bundle --release
-macdeployqt target/release/bundle/osx/ti-evo-tools.app -qmldir=./qml -always-overwrite
+macdeployqt "target/release/bundle/osx/TI-84 Toolbox.app" -qmldir=./qml -always-overwrite
 
 mkdir -p $OLDPWD/target/bundle
-rm -rf $OLDPWD/target/bundle/ti-evo-tools.app
-cp -r target/release/bundle/osx/ti-evo-tools.app $OLDPWD/target/bundle/
+rm -rf "$OLDPWD/target/bundle/TI-84 Toolbox.app"
+cp -r "target/release/bundle/osx/TI-84 Toolbox.app" "$OLDPWD/target/bundle/"
 cd -
-echo "Built and staged to target/bundle/ti-evo-tools.app!"
+echo "Built and staged to target/bundle/TI-84 Toolbox.app!"
 
 printf "Cleaning up..."
 rm -rf $TEMPDIR
@@ -42,5 +42,5 @@ echo "done"
 
 if [[ " $* " == *" --run "* ]]; then
     echo "Running program..."
-    target/bundle/ti-evo-tools.app/Contents/MacOS/ti-evo-tools
+    'target/bundle/TI-84 Toolbox.app/Contents/MacOS/ti-evo-tools'
 fi
