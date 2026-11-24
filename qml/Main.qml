@@ -14,6 +14,30 @@ Controls.ApplicationWindow {
     title: qsTr("TI Calculator")
 
     CaptureBackend { id: backend }
+    property var pendingUploads: []
+
+    function queueUploads(paths, archived) {
+        let queued = pendingUploads.slice()
+        for (let i = 0; i < paths.length; ++i) {
+            queued.push({ path: paths[i], archived: archived })
+        }
+        pendingUploads = queued
+        startNextUpload()
+    }
+
+    function startNextUpload() {
+        if (backend.busy || pendingUploads.length === 0) return
+        const nextUpload = pendingUploads[0]
+        pendingUploads = pendingUploads.slice(1)
+        backend.uploadFile(nextUpload.path, nextUpload.archived)
+    }
+
+    Connections {
+        target: backend
+        function onBusyChanged() {
+            if (!backend.busy) root.startNextUpload()
+        }
+    }
 
     function openPage(page) {
         pageStack.replace(page)
@@ -552,16 +576,17 @@ Controls.ApplicationWindow {
             FileDialog {
                 id: sendFromFilesDialog
                 title: qsTr("Choose a TI-84 EVO file")
-                fileMode: FileDialog.OpenFile
+                fileMode: FileDialog.OpenFiles
                 nameFilters: [
-                    qsTr("TI-84 EVO variable files (*.8xp2 *.8xpy2 *.8mp2)"),
-                    qsTr("Python source files (*.py)"),
+                    qsTr("Supported files (*.8xp2 *.8xpy2 *.8mp2 *.py)"),
                     qsTr("All files (*)")
                 ]
                 onAccepted: {
-                    const path = root.localPathFromUrl(selectedFile)
                     sendDialog.close()
-                    backend.uploadFile(path, sendDestination.currentIndex === 1)
+                    const paths = selectedFiles.map(function(url) {
+                        return root.localPathFromUrl(url)
+                    })
+                    root.queueUploads(paths, sendDestination.currentIndex === 1)
                 }
             }
 
@@ -881,19 +906,20 @@ Controls.ApplicationWindow {
         Controls.Page {
             id: sendFilePage
             title: qsTr("Send Files")
-            property string selectedPath: ""
+            property var selectedPaths: []
 
             FileDialog {
                 id: fileDialog
                 title: qsTr("Choose a TI calculator file")
-                fileMode: FileDialog.OpenFile
+                fileMode: FileDialog.OpenFiles
                 nameFilters: [
-                    qsTr("TI-84 EVO variable files (*.8xp2 *.8xpy2 *.8mp2)"),
-                    qsTr("Python programs (*.py)"),
+                    qsTr("Supported files (*.8xp2 *.8xpy2 *.8mp2 *.py)"),
                     qsTr("All files (*)")
                 ]
                 onAccepted: {
-                    sendFilePage.selectedPath = root.localPathFromUrl(selectedFile)
+                    sendFilePage.selectedPaths = selectedFiles.map(function(url) {
+                        return root.localPathFromUrl(url)
+                    })
                 }
             }
 
@@ -926,9 +952,13 @@ Controls.ApplicationWindow {
 
                 Controls.TextField {
                     Layout.fillWidth: true
-                    text: sendFilePage.selectedPath
+                    text: sendFilePage.selectedPaths.length === 1
+                        ? sendFilePage.selectedPaths[0]
+                        : sendFilePage.selectedPaths.length > 1
+                            ? qsTr("%1 files selected").arg(sendFilePage.selectedPaths.length)
+                            : ""
                     readOnly: true
-                    placeholderText: qsTr("No host file selected")
+                    placeholderText: qsTr("No host files selected")
                 }
 
                 Controls.Label {
@@ -949,9 +979,9 @@ Controls.ApplicationWindow {
                     Layout.preferredHeight: 48
                     text: qsTr("Send to Device")
                     icon.name: "document-send"
-                    enabled: sendFilePage.selectedPath.length > 0 && !backend.busy
-                    onClicked: backend.uploadFile(sendFilePage.selectedPath,
-                                                  sendPageDestination.currentIndex === 1)
+                    enabled: sendFilePage.selectedPaths.length > 0 && !backend.busy
+                    onClicked: root.queueUploads(sendFilePage.selectedPaths,
+                                                 sendPageDestination.currentIndex === 1)
                 }
 
                 Controls.BusyIndicator {
@@ -977,8 +1007,11 @@ Controls.ApplicationWindow {
         anchors.fill: parent
 
         onDropped: function(drop) {
-            if (backend.busy || drop.urls.length === 0) return
-            backend.uploadFile(root.localPathFromUrl(drop.urls[0]), false)
+            if (drop.urls.length === 0) return
+            const paths = drop.urls.map(function(url) {
+                return root.localPathFromUrl(url)
+            })
+            root.queueUploads(paths, false)
             drop.acceptProposedAction()
         }
     }
