@@ -383,8 +383,11 @@ Controls.ApplicationWindow {
             id: deviceFilesPage
             title: qsTr("Device Files")
             property var deviceFiles: []
+            property var selectedWireNames: []
             property bool refreshPending: false
             property var pendingGetFile: null
+            property var pendingGetFiles: []
+            property int pendingGetIndex: 0
             property var clipboardTypes: [
                 { label: qsTr("Python source (15)"), value: 15 },
                 { label: qsTr("Program (2)"), value: 2 },
@@ -426,10 +429,44 @@ Controls.ApplicationWindow {
 
             function openGetDialog(file) {
                 pendingGetFile = file
+                pendingGetFiles = [file]
+                pendingGetIndex = 0
+                openPendingGetDialog()
+            }
+
+            function openPendingGetDialog() {
+                if (backend.busy) return
+                if (pendingGetIndex >= pendingGetFiles.length) {
+                    pendingGetFile = null
+                    pendingGetFiles = []
+                    return
+                }
+                pendingGetFile = pendingGetFiles[pendingGetIndex]
                 const folder = getFileDialog.currentFolder.toString().replace(/\/$/, "")
-                getFileDialog.currentFile = folder + "/" +
-                    encodeURIComponent(file.name + "." + extensionForType(file.type))
+                getFileDialog.currentFile = folder + "/" + encodeURIComponent(
+                    pendingGetFile.name + "." + extensionForType(pendingGetFile.type))
                 getFileDialog.open()
+            }
+
+            function getSelectedFiles() {
+                pendingGetFiles = deviceFiles.filter(function(file) {
+                    return selectedWireNames.indexOf(file.wireName) >= 0
+                        && file.wireName.length > 0
+                })
+                pendingGetIndex = 0
+                openPendingGetDialog()
+            }
+
+            function toggleFileSelection(wireName, checked) {
+                let updated = selectedWireNames.slice()
+                const index = updated.indexOf(wireName)
+                if (checked && index < 0) updated.push(wireName)
+                if (!checked && index >= 0) updated.splice(index, 1)
+                selectedWireNames = updated
+            }
+
+            function clearSelection() {
+                selectedWireNames = []
             }
 
             function loadDeviceFiles() {
@@ -461,6 +498,10 @@ Controls.ApplicationWindow {
                 function onBusyChanged() {
                     if (!backend.busy) {
                         deviceFilesPage.refreshWhenReady()
+                        if (deviceFilesPage.pendingGetFiles.length > 0
+                                && !getFileDialog.visible) {
+                            deviceFilesPage.openPendingGetDialog()
+                        }
                     }
                 }
             }
@@ -478,10 +519,16 @@ Controls.ApplicationWindow {
                         const file = deviceFilesPage.pendingGetFile
                         backend.getFile(file.name, file.wireName, file.type,
                                         root.localPathFromUrl(selectedFile))
+                        deviceFilesPage.pendingGetIndex += 1
                         deviceFilesPage.pendingGetFile = null
+                        deviceFilesPage.openPendingGetDialog()
                     }
                 }
-                onRejected: deviceFilesPage.pendingGetFile = null
+                onRejected: {
+                    deviceFilesPage.pendingGetFile = null
+                    deviceFilesPage.pendingGetFiles = []
+                    deviceFilesPage.pendingGetIndex = 0
+                }
             }
 
             FileDialog {
@@ -606,6 +653,19 @@ Controls.ApplicationWindow {
                 RowLayout {
                     Layout.fillWidth: true
 
+                    Controls.Button {
+                        text: qsTr("Get")
+                        icon.name: "document-save"
+                        enabled: selectedWireNames.length > 0 && !backend.busy
+                        onClicked: deviceFilesPage.getSelectedFiles()
+                    }
+
+                    Controls.Button {
+                        text: qsTr("Clear selection")
+                        enabled: selectedWireNames.length > 0
+                        onClicked: deviceFilesPage.clearSelection()
+                    }
+
                     Item { Layout.fillWidth: true }
 
                     Controls.Button {
@@ -640,9 +700,26 @@ Controls.ApplicationWindow {
                             required property var modelData
                             width: ListView.view.width
                             enabled: !backend.busy
+                            onClicked: {
+                                if (modelData.wireName.length > 0) {
+                                    deviceFilesPage.toggleFileSelection(
+                                        modelData.wireName,
+                                        deviceFilesPage.selectedWireNames.indexOf(
+                                            modelData.wireName) < 0)
+                                }
+                            }
 
                             contentItem: RowLayout {
                                 spacing: 8
+
+                                Controls.CheckBox {
+                                    checked: deviceFilesPage.selectedWireNames.indexOf(
+                                        modelData.wireName) >= 0
+                                    enabled: modelData.wireName.length > 0 && !backend.busy
+                                    Accessible.name: qsTr("Select %1").arg(modelData.name)
+                                    onToggled: deviceFilesPage.toggleFileSelection(
+                                        modelData.wireName, checked)
+                                }
 
                                 ColumnLayout {
                                     Layout.fillWidth: true
