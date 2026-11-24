@@ -36,7 +36,7 @@ when available, then confirms it with a Kermit initialization ACK.
 | --- | --- |
 | TI-84 Evo screen capture | Yes |
 | TI-84 Evo directory listing and individual deletion | Yes |
-| Native Evo `.8xp2` programs | Yes |
+| TI-BASIC Evo `.8xp2` programs | Yes |
 | UTF-8 `.py` source | Converted to an Evo Python variable (type 15) |
 | Legacy `.8xp` files | No; they are rejected before USB is opened |
 | Other TI calculator models | Not tested or supported |
