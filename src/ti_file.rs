@@ -19,9 +19,9 @@ pub fn read(path: &Path) -> Result<VariableFile, String> {
         .unwrap_or_default()
         .to_ascii_lowercase();
     match extension.as_str() {
-        "8xp2" => parse_evo_program(path, &bytes),
+        "8xp2" | "8xpy2" | "8mp2" => parse_evo_program(path, &bytes),
         "py" => parse_python(path, &bytes),
-        _ => Err("unsupported file: select a TI-84 EVO .8xp2 or Python .py file".into()),
+        _ => Err("unsupported file: select a TI-84 EVO .8xp2, .8xpy2, .8mp2, or Python .py file".into()),
     }
 }
 
@@ -39,12 +39,14 @@ fn parse_evo_program(path: &Path, bytes: &[u8]) -> Result<VariableFile, String> 
         .ok_or_else(|| "invalid EVO program: missing token name".to_string())?;
     let display_name = decode_evo_name(token_name).unwrap_or_else(|| file_stem(path));
     let wire_name = percent_encode_utf8(&token_name_to_string(token_name)?);
-    map_get(&root, "data")
+    let data = map_get(&root, "data")
         .and_then(as_bytes)
         .ok_or_else(|| "invalid EVO program: missing data".to_string())?;
     let archived = map_get(metadata, "flags")
         .and_then(as_integer)
-        .is_some_and(|flags| flags & 1 != 0);
+        .is_some_and(|flags| flags & 1 != 0)
+        || matches!(container_type, 15 | 18) && is_python_bytecode(data)
+        || matches!(container_type, 4 | 5);
 
     Ok(VariableFile {
         display_name,
@@ -60,8 +62,27 @@ fn parse_evo_program(path: &Path, bytes: &[u8]) -> Result<VariableFile, String> 
     })
 }
 
+fn is_python_bytecode(data: &[u8]) -> bool {
+    if data.len() < 8 || data.get(..4) != Some(&[0x13, 0x02, 0xd8, 0x20]) {
+        return false;
+    }
+    let declared_end = u32::from_le_bytes([data[4], data[5], data[6], data[7]]) as usize;
+    declared_end > 8 && declared_end <= data.len()
+}
+
 fn parse_python(path: &Path, bytes: &[u8]) -> Result<VariableFile, String> {
     let display_name = calculator_name(path)?;
+    parse_python_source(&display_name, bytes)
+}
+
+fn parse_python_source(display_name: &str, bytes: &[u8]) -> Result<VariableFile, String> {
+    let display_name = display_name.to_ascii_uppercase();
+    if display_name.is_empty()
+        || display_name.len() > 8
+        || !display_name.bytes().all(|byte| byte.is_ascii_uppercase())
+    {
+        return Err("Python name must contain 1–8 letters for the TI-84 EVO".into());
+    }
     std::str::from_utf8(bytes).map_err(|_| "Python source must be valid UTF-8".to_string())?;
     if bytes.contains(&0) {
         return Err("Python source cannot contain NUL bytes".into());
@@ -87,7 +108,7 @@ fn parse_python(path: &Path, bytes: &[u8]) -> Result<VariableFile, String> {
     program.extend_from_slice(bytes);
     program.push(0);
 
-    let contents = python_container(&display_name, &program)?;
+    let contents = evo_container(&display_name, EVO_PYTHON_TYPE, &program)?;
     Ok(VariableFile {
         wire_name: percent_encode_utf8(&ascii_name_to_evo_tokens(&display_name)),
         display_name,
@@ -97,7 +118,7 @@ fn parse_python(path: &Path, bytes: &[u8]) -> Result<VariableFile, String> {
     })
 }
 
-fn python_container(name: &str, program: &[u8]) -> Result<Vec<u8>, String> {
+fn evo_container(name: &str, kind: u8, data: &[u8]) -> Result<Vec<u8>, String> {
     let mut token_name = Vec::with_capacity(name.len() * 2);
     for byte in name.bytes() {
         token_name.extend_from_slice(&[byte - b'A', 0xe8]);
@@ -107,7 +128,7 @@ fn python_container(name: &str, program: &[u8]) -> Result<Vec<u8>, String> {
     cbor_text(&mut output, "metaData")?;
     output.push(0xbf);
     cbor_text(&mut output, "type")?;
-    cbor_unsigned(&mut output, u64::from(EVO_PYTHON_TYPE));
+    cbor_unsigned(&mut output, u64::from(kind));
     cbor_text(&mut output, "version")?;
     cbor_unsigned(&mut output, 1);
     cbor_text(&mut output, "name")?;
@@ -118,12 +139,38 @@ fn python_container(name: &str, program: &[u8]) -> Result<Vec<u8>, String> {
     cbor_text(&mut output, "size")?;
     cbor_unsigned(
         &mut output,
-        u64::try_from(program.len()).map_err(|_| "Python program is too large".to_string())?,
+        u64::try_from(data.len()).map_err(|_| "EVO variable is too large".to_string())?,
     );
     cbor_text(&mut output, "data")?;
-    cbor_bytes(&mut output, program)?;
+    cbor_bytes(&mut output, data)?;
     output.push(0xff);
     Ok(output)
+}
+
+pub fn from_clipboard(name: &str, kind: u8, data: &[u8]) -> Result<VariableFile, String> {
+    if kind == EVO_PYTHON_TYPE {
+        return parse_python_source(name, data);
+    }
+    if kind == 18 {
+        return Err("Python bytecode must be sent as a native .8mp2 file".into());
+    }
+
+    let display_name = name.to_ascii_uppercase();
+    if display_name.is_empty()
+        || display_name.len() > 8
+        || !display_name.bytes().all(|byte| byte.is_ascii_uppercase())
+    {
+        return Err("variable name must contain 1–8 letters".into());
+    }
+    let wire_name = evo_wire_name(&display_name)?;
+    let contents = evo_container(&display_name, kind, data)?;
+    Ok(VariableFile {
+        display_name,
+        wire_name,
+        kind,
+        archived: matches!(kind, 4 | 5),
+        contents,
+    })
 }
 
 fn cbor_text(output: &mut Vec<u8>, value: &str) -> Result<(), String> {

@@ -14,3 +14,17 @@ void copy_file_to_clipboard(const QString &path) {
 void copy_text_to_clipboard(const QString &text) {
   QGuiApplication::clipboard()->setText(text);
 }
+
+QString clipboard_file_path() {
+  const auto urls = QGuiApplication::clipboard()->mimeData()->urls();
+  for (const auto &url : urls) {
+    if (url.isLocalFile()) {
+      return url.toLocalFile();
+    }
+  }
+  return QString();
+}
+
+QString clipboard_text() {
+  return QGuiApplication::clipboard()->text();
+}

@@ -10,6 +10,8 @@ pub mod ffi {
 
         fn copy_file_to_clipboard(path: &QString);
         fn copy_text_to_clipboard(text: &QString);
+        fn clipboard_file_path() -> QString;
+        fn clipboard_text() -> QString;
     }
 
     extern "RustQt" {
@@ -58,6 +60,14 @@ pub mod ffi {
             self: Pin<&mut Self>,
             display_name: &QString,
             wire_name: &QString,
+            kind: i32,
+        );
+
+        #[qinvokable]
+        #[cxx_name = "sendClipboard"]
+        fn send_clipboard(
+            self: Pin<&mut Self>,
+            display_name: &QString,
             kind: i32,
         );
     }
@@ -371,6 +381,74 @@ impl ffi::CaptureBackend {
                         }
                         Err(error) => backend.as_mut().set_status(QString::from(&format!(
                             "Copy failed: {error}"
+                        ))),
+                    }
+                    backend.as_mut().set_busy(false);
+                })
+                .ok();
+        });
+    }
+
+    pub fn send_clipboard(
+        mut self: Pin<&mut Self>,
+        display_name: &QString,
+        kind: i32,
+    ) {
+        if *self.busy() {
+            return;
+        }
+
+        let display_name = display_name.to_string();
+        let kind = match u8::try_from(kind) {
+            Ok(kind) => kind,
+            Err(_) => {
+                self.as_mut()
+                    .set_status(QString::from("Clipboard send failed: invalid EVO type"));
+                return;
+            }
+        };
+        let clipboard_path = ffi::clipboard_file_path().to_string();
+        let clipboard_text = ffi::clipboard_text().to_string();
+        if clipboard_path.is_empty() && clipboard_text.is_empty() {
+            self.as_mut()
+                .set_status(QString::from("Clipboard send failed: clipboard is empty"));
+            return;
+        }
+        self.as_mut().set_busy(true);
+        self.as_mut().set_status(QString::from(&format!(
+            "Preparing clipboard data as {display_name} (type {kind})…"
+        )));
+
+        let qt_thread = cxx_qt::Threading::qt_thread(self.as_ref().get_ref());
+        std::thread::spawn(move || {
+            let variable = if !clipboard_path.is_empty() {
+                let path = std::path::PathBuf::from(&clipboard_path);
+                crate::ti_file::read(&path).and_then(|variable| {
+                    if variable.kind != kind {
+                        return Err(format!(
+                            "clipboard file has EVO type {}, but type {kind} was selected",
+                            variable.kind
+                        ));
+                    }
+                    Ok(variable)
+                })
+            } else {
+                crate::ti_file::from_clipboard(
+                    &display_name,
+                    kind,
+                    clipboard_text.as_bytes(),
+                )
+            };
+            let result = variable.and_then(crate::usb::send_variable_file);
+
+            qt_thread
+                .queue(move |mut backend| {
+                    match result {
+                        Ok(description) => backend.as_mut().set_status(QString::from(&format!(
+                            "Clipboard variable sent successfully: {description}"
+                        ))),
+                        Err(error) => backend.as_mut().set_status(QString::from(&format!(
+                            "Clipboard send failed: {error}"
                         ))),
                     }
                     backend.as_mut().set_busy(false);

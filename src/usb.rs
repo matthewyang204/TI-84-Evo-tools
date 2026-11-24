@@ -109,9 +109,13 @@ pub fn probe_send_host_file(path: &std::path::Path) -> Result<String, String> {
 
 fn send_host_file_on_interface(path: &std::path::Path) -> Result<String, String> {
     let variable = crate::ti_file::read(path)?;
+    send_variable_file(variable)
+}
+
+pub fn send_variable_file(variable: crate::ti_file::VariableFile) -> Result<String, String> {
     let memory_target = u8::from(variable.archived);
     let destination = format!(
-        "hh01/xfr/var?name={}&type={}&memtarget={memory_target}&policy=0",
+        "hh01/xfr/var?name={}&type={}&memtarget={memory_target}&policy=1",
         variable.wire_name, variable.kind
     );
     trace(format_args!(

@@ -385,6 +385,23 @@ Controls.ApplicationWindow {
             property var deviceFiles: []
             property bool refreshPending: false
             property var pendingGetFile: null
+            property var clipboardTypes: [
+                { label: qsTr("Python source (15)"), value: 15 },
+                { label: qsTr("Program (2)"), value: 2 },
+                { label: qsTr("Number (0)"), value: 0 },
+                { label: qsTr("List (1)"), value: 1 },
+                { label: qsTr("Data (3)"), value: 3 },
+                { label: qsTr("Complex number (4)"), value: 4 },
+                { label: qsTr("Complex list (5)"), value: 5 },
+                { label: qsTr("String (6)"), value: 6 },
+                { label: qsTr("Y-variable (7)"), value: 7 },
+                { label: qsTr("Picture (8)"), value: 8 },
+                { label: qsTr("Settings (10)"), value: 10 },
+                { label: qsTr("Window (12)"), value: 12 },
+                { label: qsTr("Zoom (13)"), value: 13 },
+                { label: qsTr("Table (14)"), value: 14 },
+                { label: qsTr("Python bytecode (18)"), value: 18 }
+            ]
 
             function extensionForType(type) {
                 switch (type) {
@@ -467,6 +484,92 @@ Controls.ApplicationWindow {
                 onRejected: deviceFilesPage.pendingGetFile = null
             }
 
+            FileDialog {
+                id: sendFromFilesDialog
+                title: qsTr("Choose a TI-84 EVO file")
+                fileMode: FileDialog.OpenFile
+                nameFilters: [
+                    qsTr("TI-84 EVO variable files (*.8xp2 *.8xpy2 *.8mp2)"),
+                    qsTr("Python source files (*.py)"),
+                    qsTr("All files (*)")
+                ]
+                onAccepted: {
+                    const path = root.localPathFromUrl(selectedFile)
+                    sendDialog.close()
+                    backend.uploadFile(path)
+                }
+            }
+
+            Controls.Dialog {
+                id: sendDialog
+                anchors.centerIn: parent
+                width: Math.min(parent.width - 32, 440)
+                modal: true
+                title: qsTr("Send to calculator")
+                standardButtons: Controls.Dialog.Cancel
+
+                contentItem: ColumnLayout {
+                    spacing: 12
+
+                    Controls.Label {
+                        Layout.fillWidth: true
+                        text: qsTr("Choose an EVO file or send the current clipboard contents as a variable.")
+                        wrapMode: Text.WordWrap
+                    }
+
+                    Controls.Button {
+                        Layout.fillWidth: true
+                        text: qsTr("Choose File…")
+                        icon.name: "document-open"
+                        onClicked: sendFromFilesDialog.open()
+                    }
+
+                    Controls.Label {
+                        Layout.fillWidth: true
+                        text: qsTr("Clipboard text is sent as UTF-8 variable data. Enter its name and choose the matching EVO type. Python source is packaged as type 15; type 18 bytecode must be sent as a native .8mp2 file.")
+                        wrapMode: Text.WordWrap
+                    }
+
+                    Controls.Label {
+                        text: qsTr("Variable name")
+                    }
+
+                    Controls.TextField {
+                        id: clipboardVariableName
+                        Layout.fillWidth: true
+                        text: "PROGRAM"
+                        maximumLength: 8
+                        placeholderText: qsTr("1–8 letters")
+                    }
+
+                    Controls.Label {
+                        text: qsTr("EVO type")
+                    }
+
+                    Controls.ComboBox {
+                        id: clipboardVariableType
+                        Layout.fillWidth: true
+                        model: deviceFilesPage.clipboardTypes
+                        textRole: "label"
+                        currentIndex: 0
+                    }
+
+                    Controls.Button {
+                        Layout.fillWidth: true
+                        text: qsTr("Send Clipboard")
+                        icon.name: "edit-paste"
+                        enabled: !backend.busy && clipboardVariableName.text.length > 0
+                        onClicked: {
+                            const selectedType = deviceFilesPage.clipboardTypes[
+                                clipboardVariableType.currentIndex].value
+                            sendDialog.close()
+                            backend.sendClipboard(clipboardVariableName.text,
+                                                  selectedType)
+                        }
+                    }
+                }
+            }
+
             Controls.Dialog {
                 id: deleteDialog
                 anchors.centerIn: parent
@@ -500,11 +603,23 @@ Controls.ApplicationWindow {
                 anchors.fill: parent
                 spacing: 16
 
-                Controls.Button {
-                    Layout.alignment: Qt.AlignRight
-                    text: qsTr("Refresh")
-                    enabled: !backend.busy
-                    onClicked: backend.refreshFiles()
+                RowLayout {
+                    Layout.fillWidth: true
+
+                    Item { Layout.fillWidth: true }
+
+                    Controls.Button {
+                        text: qsTr("Send")
+                        icon.name: "document-send"
+                        enabled: !backend.busy
+                        onClicked: sendDialog.open()
+                    }
+
+                    Controls.Button {
+                        text: qsTr("Refresh")
+                        enabled: !backend.busy
+                        onClicked: backend.refreshFiles()
+                    }
                 }
 
                 Rectangle {
@@ -647,7 +762,7 @@ Controls.ApplicationWindow {
                 title: qsTr("Choose a TI calculator file")
                 fileMode: FileDialog.OpenFile
                 nameFilters: [
-                    qsTr("TI-84 EVO programs (*.8xp2)"),
+                    qsTr("TI-84 EVO variable files (*.8xp2 *.8xpy2 *.8mp2)"),
                     qsTr("Python programs (*.py)"),
                     qsTr("All files (*)")
                 ]
