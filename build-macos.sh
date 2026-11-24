@@ -3,7 +3,8 @@ set -euo pipefail
 
 TEMPDIR=/tmp/build-ti-evo-tools-$(head -c 32 /dev/urandom | shasum -a 256 | awk '{print $1}')
 mkdir -p $TEMPDIR
-if [ -d target]; then
+rm -rf $TEMPDIR/* $TEMPDIR/.*
+if [ -d target ]; then
     mv target $TEMPDIR/
 fi
 cp -a . $TEMPDIR
