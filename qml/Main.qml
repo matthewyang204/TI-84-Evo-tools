@@ -37,6 +37,20 @@ Controls.ApplicationWindow {
         }
     }
 
+    function localPathFromUrl(value) {
+        const url = value.toString()
+        if (url.startsWith("file:///")) {
+            const path = decodeURIComponent(url.substring(8))
+            return Qt.platform.os === "windows" ? path : "/" + path
+        }
+        if (url.startsWith("file://")) {
+            const path = decodeURIComponent(url.substring(7)).replace(/\//g,
+                Qt.platform.os === "windows" ? "\\" : "/")
+            return Qt.platform.os === "windows" ? "\\\\" + path : "/" + path
+        }
+        return decodeURIComponent(url)
+    }
+
     header: Controls.ToolBar {
         RowLayout {
             anchors.fill: parent
@@ -370,6 +384,36 @@ Controls.ApplicationWindow {
             title: qsTr("Device Files")
             property var deviceFiles: []
             property bool refreshPending: false
+            property var pendingGetFile: null
+
+            function extensionForType(type) {
+                switch (type) {
+                case 0: return "8xn2"
+                case 1: return "8xl2"
+                case 2: return "8xp2"
+                case 3: return "8xd2"
+                case 4: return "8ci2"
+                case 5: return "8ca2"
+                case 6: return "8xm2"
+                case 7: return "8xy2"
+                case 8: return "8xv2"
+                case 10: return "8xs2"
+                case 12: return "8xw2"
+                case 13: return "8xz2"
+                case 14: return "8xt2"
+                case 15: return "py"
+                case 18: return "8mp2"
+                default: return "bin"
+                }
+            }
+
+            function openGetDialog(file) {
+                pendingGetFile = file
+                const folder = getFileDialog.currentFolder.toString().replace(/\/$/, "")
+                getFileDialog.currentFile = folder + "/" +
+                    encodeURIComponent(file.name + "." + extensionForType(file.type))
+                getFileDialog.open()
+            }
 
             function loadDeviceFiles() {
                 try {
@@ -402,6 +446,25 @@ Controls.ApplicationWindow {
                         deviceFilesPage.refreshWhenReady()
                     }
                 }
+            }
+
+            FileDialog {
+                id: getFileDialog
+                title: qsTr("Save calculator file")
+                fileMode: FileDialog.SaveFile
+                defaultSuffix: deviceFilesPage.pendingGetFile
+                    ? deviceFilesPage.extensionForType(deviceFilesPage.pendingGetFile.type)
+                    : "bin"
+                nameFilters: [qsTr("All files (*)")]
+                onAccepted: {
+                    if (deviceFilesPage.pendingGetFile) {
+                        const file = deviceFilesPage.pendingGetFile
+                        backend.getFile(file.name, file.wireName, file.type,
+                                        root.localPathFromUrl(selectedFile))
+                        deviceFilesPage.pendingGetFile = null
+                    }
+                }
+                onRejected: deviceFilesPage.pendingGetFile = null
             }
 
             Controls.Dialog {
@@ -464,7 +527,7 @@ Controls.ApplicationWindow {
                             enabled: !backend.busy
 
                             contentItem: RowLayout {
-                                spacing: 16
+                                spacing: 8
 
                                 ColumnLayout {
                                     Layout.fillWidth: true
@@ -490,9 +553,34 @@ Controls.ApplicationWindow {
                                 }
 
                                 Controls.Button {
+                                    Layout.minimumWidth: implicitWidth
+                                    text: qsTr("Get")
+                                    font.pixelSize: 12
+                                    leftPadding: 6
+                                    rightPadding: 6
+                                    enabled: modelData.wireName.length > 0 && !backend.busy
+                                    onClicked: deviceFilesPage.openGetDialog(modelData)
+                                }
+
+                                Controls.Button {
+                                    Layout.minimumWidth: implicitWidth
+                                    text: qsTr("Copy to clipboard")
+                                    font.pixelSize: 12
+                                    leftPadding: 6
+                                    rightPadding: 6
+                                    enabled: modelData.wireName.length > 0 && !backend.busy
+                                    onClicked: backend.copyFile(modelData.name,
+                                                               modelData.wireName,
+                                                               modelData.type)
+                                }
+
+                                Controls.Button {
+                                    Layout.minimumWidth: implicitWidth
                                     Layout.rightMargin: 16
                                     text: qsTr("Delete")
-                                    icon.name: "edit-delete"
+                                    font.pixelSize: 12
+                                    leftPadding: 6
+                                    rightPadding: 6
                                     enabled: modelData.wireName.length > 0 && !backend.busy
                                     onClicked: {
                                         deleteDialog.pendingFile = modelData
@@ -564,8 +652,7 @@ Controls.ApplicationWindow {
                     qsTr("All files (*)")
                 ]
                 onAccepted: {
-                    sendFilePage.selectedPath = decodeURIComponent(
-                        selectedFile.toString().replace(/^file:\/\//, ""))
+                    sendFilePage.selectedPath = root.localPathFromUrl(selectedFile)
                 }
             }
 

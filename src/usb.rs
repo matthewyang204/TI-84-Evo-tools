@@ -196,7 +196,11 @@ fn request_resource(
     request_uri(&format!("hh01/inf/{resource}"), send_break, send_attributes)
 }
 
-fn request_uri(uri: &str, send_break: bool, send_attributes: bool) -> Result<Vec<u8>, String> {
+pub(crate) fn request_uri(
+    uri: &str,
+    send_break: bool,
+    send_attributes: bool,
+) -> Result<Vec<u8>, String> {
     let mut connection = connect()?;
     // The XFR get layer wraps the already-qualified resource URI in another
     // device-qualified `get` command. This is the actual Kermit filename.

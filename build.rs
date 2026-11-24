@@ -4,5 +4,6 @@ fn main() {
     CxxQtBuilder::new_qml_module(QmlModule::new("org.example.tiscreen").qml_file("qml/Main.qml"))
         .qt_module("Network")
         .files(["src/backend.rs"])
+        .cpp_files(["src/clipboard.cpp"])
         .build();
 }
