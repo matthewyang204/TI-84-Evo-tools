@@ -388,6 +388,8 @@ Controls.ApplicationWindow {
             property var pendingGetFile: null
             property var pendingGetFiles: []
             property int pendingGetIndex: 0
+            property var pendingDeleteFiles: []
+            property int pendingDeleteIndex: 0
             property var clipboardTypes: [
                 { label: qsTr("Python source (15)"), value: 15 },
                 { label: qsTr("Program (2)"), value: 2 },
@@ -469,6 +471,19 @@ Controls.ApplicationWindow {
                 selectedWireNames = []
             }
 
+            function deleteNextFile() {
+                if (backend.busy) return
+                if (pendingDeleteIndex < pendingDeleteFiles.length) {
+                    const file = pendingDeleteFiles[pendingDeleteIndex]
+                    pendingDeleteIndex += 1
+                    backend.deleteFile(file.name, file.wireName, file.type)
+                } else {
+                    pendingDeleteFiles = []
+                    pendingDeleteIndex = 0
+                    clearSelection()
+                }
+            }
+
             function loadDeviceFiles() {
                 try {
                     deviceFiles = JSON.parse(backend.filesJson)
@@ -498,6 +513,9 @@ Controls.ApplicationWindow {
                 function onBusyChanged() {
                     if (!backend.busy) {
                         deviceFilesPage.refreshWhenReady()
+                        if (deviceFilesPage.pendingDeleteFiles.length > 0) {
+                            deviceFilesPage.deleteNextFile()
+                        }
                         if (deviceFilesPage.pendingGetFiles.length > 0
                                 && !getFileDialog.visible) {
                             deviceFilesPage.openPendingGetDialog()
@@ -623,27 +641,28 @@ Controls.ApplicationWindow {
                 modal: true
                 title: qsTr("Delete device file?")
                 standardButtons: Controls.Dialog.Ok | Controls.Dialog.Cancel
-                property var pendingFile: null
+                property var pendingFiles: []
 
                 contentItem: Controls.Label {
                     width: 352
-                    text: deleteDialog.pendingFile
+                    text: deleteDialog.pendingFiles.length === 1
                         ? qsTr("Permanently delete %1 (type %2) from the calculator?")
-                            .arg(deleteDialog.pendingFile.name)
-                            .arg(deleteDialog.pendingFile.type)
-                        : ""
+                            .arg(deleteDialog.pendingFiles[0].name)
+                            .arg(deleteDialog.pendingFiles[0].type)
+                        : qsTr("Permanently delete %1 selected files from the calculator?")
+                            .arg(deleteDialog.pendingFiles.length)
                     wrapMode: Text.WordWrap
                 }
 
                 onAccepted: {
-                    if (pendingFile) {
-                        backend.deleteFile(pendingFile.name,
-                                           pendingFile.wireName,
-                                           pendingFile.type)
+                    if (pendingFiles.length > 0) {
+                        deviceFilesPage.pendingDeleteFiles = pendingFiles.slice()
+                        deviceFilesPage.pendingDeleteIndex = 0
+                        deviceFilesPage.deleteNextFile()
                     }
-                    pendingFile = null
+                    pendingFiles = []
                 }
-                onRejected: pendingFile = null
+                onRejected: pendingFiles = []
             }
 
             ColumnLayout {
@@ -664,6 +683,23 @@ Controls.ApplicationWindow {
                         text: qsTr("Clear selection")
                         enabled: selectedWireNames.length > 0
                         onClicked: deviceFilesPage.clearSelection()
+                    }
+
+                    Controls.Button {
+                        text: qsTr("Delete selected")
+                        icon.name: "edit-delete"
+                        enabled: selectedWireNames.length > 0 && !backend.busy
+                        onClicked: {
+                            deleteDialog.pendingFiles = deviceFilesPage.deviceFiles.filter(
+                                function(file) {
+                                    return deviceFilesPage.selectedWireNames.indexOf(
+                                        file.wireName) >= 0 && file.wireName.length > 0
+                                })
+                            deleteDialog.title = deleteDialog.pendingFiles.length === 1
+                                ? qsTr("Delete device file?")
+                                : qsTr("Delete selected files?")
+                            deleteDialog.open()
+                        }
                     }
 
                     Item { Layout.fillWidth: true }
@@ -775,7 +811,8 @@ Controls.ApplicationWindow {
                                     rightPadding: 6
                                     enabled: modelData.wireName.length > 0 && !backend.busy
                                     onClicked: {
-                                        deleteDialog.pendingFile = modelData
+                                        deleteDialog.pendingFiles = [modelData]
+                                        deleteDialog.title = qsTr("Delete device file?")
                                         deleteDialog.open()
                                     }
                                 }
