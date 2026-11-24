@@ -604,7 +604,7 @@ Controls.ApplicationWindow {
                         Layout.fillWidth: true
                         text: "PROGRAM"
                         maximumLength: 8
-                        placeholderText: qsTr("1–8 letters")
+                        placeholderText: qsTr("1–8 characters, starts with a letter")
                     }
 
                     Controls.Label {
@@ -899,7 +899,7 @@ Controls.ApplicationWindow {
 
                 Controls.Label {
                     Layout.fillWidth: true
-                    text: qsTr("Select a native TI-84 EVO .8xp2 program or a Python .py file. Python filenames must contain 1–8 letters.")
+                    text: qsTr("Select a native TI-84 EVO .8xp2 program or a Python .py file. Python filenames must be 1–8 characters, start with a letter, and contain only letters or numbers.")
                     wrapMode: Text.WordWrap
                     horizontalAlignment: Text.AlignHCenter
                 }

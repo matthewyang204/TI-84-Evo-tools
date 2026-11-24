@@ -77,11 +77,8 @@ fn parse_python(path: &Path, bytes: &[u8]) -> Result<VariableFile, String> {
 
 fn parse_python_source(display_name: &str, bytes: &[u8]) -> Result<VariableFile, String> {
     let display_name = display_name.to_ascii_uppercase();
-    if display_name.is_empty()
-        || display_name.len() > 8
-        || !display_name.bytes().all(|byte| byte.is_ascii_uppercase())
-    {
-        return Err("Python name must contain 1–8 letters for the TI-84 EVO".into());
+    if !is_valid_evo_name(&display_name) {
+        return Err("Python name must be 1–8 characters, start with a letter, and contain only letters or numbers".into());
     }
     std::str::from_utf8(bytes).map_err(|_| "Python source must be valid UTF-8".to_string())?;
     if bytes.contains(&0) {
@@ -119,10 +116,10 @@ fn parse_python_source(display_name: &str, bytes: &[u8]) -> Result<VariableFile,
 }
 
 fn evo_container(name: &str, kind: u8, data: &[u8]) -> Result<Vec<u8>, String> {
-    let mut token_name = Vec::with_capacity(name.len() * 2);
-    for byte in name.bytes() {
-        token_name.extend_from_slice(&[byte - b'A', 0xe8]);
-    }
+    let token_name = ascii_name_to_evo_tokens(name)
+        .encode_utf16()
+        .flat_map(u16::to_le_bytes)
+        .collect::<Vec<_>>();
 
     let mut output = vec![0xbf];
     cbor_text(&mut output, "metaData")?;
@@ -156,11 +153,8 @@ pub fn from_clipboard(name: &str, kind: u8, data: &[u8]) -> Result<VariableFile,
     }
 
     let display_name = name.to_ascii_uppercase();
-    if display_name.is_empty()
-        || display_name.len() > 8
-        || !display_name.bytes().all(|byte| byte.is_ascii_uppercase())
-    {
-        return Err("variable name must contain 1–8 letters".into());
+    if !is_valid_evo_name(&display_name) {
+        return Err("variable name must be 1–8 characters, start with a letter, and contain only letters or numbers".into());
     }
     let wire_name = evo_wire_name(&display_name)?;
     let contents = evo_container(&display_name, kind, data)?;
@@ -217,8 +211,8 @@ fn cbor_major(output: &mut Vec<u8>, major: u8, value: u64) {
 
 fn calculator_name(path: &Path) -> Result<String, String> {
     let name = file_stem(path).to_ascii_uppercase();
-    if name.is_empty() || name.len() > 8 || !name.bytes().all(|byte| byte.is_ascii_uppercase()) {
-        return Err("Python filename must contain 1–8 letters for the TI-84 EVO".into());
+    if !is_valid_evo_name(&name) {
+        return Err("Python filename must be 1–8 characters, start with a letter, and contain only letters or numbers".into());
     }
     Ok(name)
 }
@@ -256,8 +250,10 @@ fn decode_evo_name(bytes: &[u8]) -> Option<String> {
     let tokens = token_name_to_string(bytes).ok()?;
     let mut output = String::new();
     for token in tokens.chars() {
-        match token as u32 {
+        let value = token as u32;
+        match value {
             value @ 0xe800..=0xe819 => output.push(char::from(b'A' + (value - 0xe800) as u8)),
+            value @ 0xe401..=0xe40a => output.push(char::from(b'0' + (value - 0xe401) as u8)),
             _ => return None,
         }
     }
@@ -266,14 +262,31 @@ fn decode_evo_name(bytes: &[u8]) -> Option<String> {
 
 fn ascii_name_to_evo_tokens(name: &str) -> String {
     name.bytes()
-        .map(|byte| char::from_u32(0xe800 + u32::from(byte - b'A')).unwrap())
+        .map(|byte| {
+            let token = match byte {
+                b'A'..=b'Z' => 0xe800 + u32::from(byte - b'A'),
+                b'0'..=b'9' => 0xe401 + u32::from(byte - b'0'),
+                _ => unreachable!("EVO names are validated before token encoding"),
+            };
+            char::from_u32(token).unwrap()
+        })
         .collect()
+}
+
+fn is_valid_evo_name(name: &str) -> bool {
+    let bytes = name.as_bytes();
+    !bytes.is_empty()
+        && bytes.len() <= 8
+        && bytes[0].is_ascii_alphabetic()
+        && bytes[1..]
+            .iter()
+            .all(|byte| byte.is_ascii_alphanumeric())
 }
 
 pub(crate) fn evo_wire_name(name: &str) -> Result<String, String> {
     let name = name.to_ascii_uppercase();
-    if name.is_empty() || name.len() > 8 || !name.bytes().all(|byte| byte.is_ascii_uppercase()) {
-        return Err("EVO variable name must contain 1–8 letters".into());
+    if !is_valid_evo_name(&name) {
+        return Err("EVO variable name must be 1–8 characters, start with a letter, and contain only letters or numbers".into());
     }
     Ok(percent_encode_utf8(&ascii_name_to_evo_tokens(&name)))
 }

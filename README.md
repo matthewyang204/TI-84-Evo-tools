@@ -21,7 +21,7 @@ or endorsed by Texas Instruments.
 - Delete one selected variable after confirmation without clearing all RAM.
 - Send native TI-84 Evo `.8xp2` programs while preserving their memory target.
 - Convert UTF-8 `.py` source into a native Evo Python program and send it to
-  RAM. Python program names must contain one to eight ASCII letters.
+  RAM. Program names must contain one to eight ASCII letters or digits, starting with a letter.
 - Run lower-level USB and resource probes from the command line.
 - Decode a previously saved raw directory response without a calculator.
 
