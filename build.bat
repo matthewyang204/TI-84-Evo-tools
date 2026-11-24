@@ -1,0 +1,6 @@
+@echo off
+
+echo Compiling program...
+cargo build --release
+echo Deploying Qt modules to program...
+windeployqt target\release\ti-evo-tools.exe
