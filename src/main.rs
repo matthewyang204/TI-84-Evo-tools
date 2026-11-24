@@ -8,7 +8,7 @@ mod ti_file;
 mod usb;
 
 use cxx_qt::casting::Upcast;
-use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QQmlEngine, QUrl};
+use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QQmlEngine, QUrl, QQuickStyle, QString};
 use std::pin::Pin;
 
 fn main() {
@@ -144,6 +144,9 @@ fn main() {
 
     let mut app = QGuiApplication::new();
     let mut engine = QQmlApplicationEngine::new();
+
+    #[cfg(target_os = "macos")]
+    QQuickStyle::set_style(&QString::from("Fusion"));
 
     if let Some(engine) = engine.as_mut() {
         engine.load(&QUrl::from("qrc:/qt/qml/org/example/tiscreen/qml/Main.qml"));
