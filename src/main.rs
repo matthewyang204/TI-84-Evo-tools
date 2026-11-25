@@ -145,7 +145,6 @@ fn main() {
     let mut app = QGuiApplication::new();
     let mut engine = QQmlApplicationEngine::new();
 
-    #[cfg(target_os = "macos")]
     QQuickStyle::set_style(&QString::from("Fusion"));
 
     if let Some(engine) = engine.as_mut() {
