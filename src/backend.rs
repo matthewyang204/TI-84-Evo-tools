@@ -6,12 +6,14 @@ pub mod ffi {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         include!("ti-evo-tools/src/clipboard.h");
+        include!("ti-evo-tools/src/seticon.h");
         type QString = cxx_qt_lib::QString;
 
         fn copy_file_to_clipboard(path: &QString);
         fn copy_text_to_clipboard(text: &QString);
         fn clipboard_file_path() -> QString;
         fn clipboard_text() -> QString;
+        fn set_application_icon_from_exe_resource();
     }
 
     extern "RustQt" {

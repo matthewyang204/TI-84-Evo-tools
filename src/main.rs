@@ -143,6 +143,7 @@ fn main() {
     }
 
     let mut app = QGuiApplication::new();
+    backend::ffi::set_application_icon_from_exe_resource();
     let mut engine = QQmlApplicationEngine::new();
 
     QQuickStyle::set_style(&QString::from("Fusion"));

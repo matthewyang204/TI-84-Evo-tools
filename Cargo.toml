@@ -17,6 +17,7 @@ serialport = "4.10"
 
 [build-dependencies]
 cxx-qt-build = { version = "0.10", features = ["link_qt_object_files"] }
+winres = "0.1.12"
 
 [patch.crates-io]
 qt-build-utils = { path = "vendor/qt-build-utils" }
