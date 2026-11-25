@@ -733,11 +733,35 @@ struct QUrlPath(String);
 
 impl QUrlPath {
     fn from_path(path: &std::path::Path) -> Self {
-        let path = path
-            .to_string_lossy()
-            .replace('%', "%25")
-            .replace(' ', "%20");
-        Self(format!("file://{path}?v={}", timestamp()))
+        let path = path.to_string_lossy().replace('\\', "/");
+        let encoded_path = path
+            .bytes()
+            .enumerate()
+            .fold(String::new(), |mut output, (index, byte)| {
+                if byte.is_ascii_alphanumeric()
+                    || matches!(byte, b'-' | b'.' | b'_' | b'~' | b'/')
+                    || (cfg!(windows) && index == 1 && byte == b':')
+                {
+                    output.push(char::from(byte));
+                } else {
+                    const HEX: &[u8; 16] = b"0123456789ABCDEF";
+                    output.push('%');
+                    output.push(char::from(HEX[usize::from(byte >> 4)]));
+                    output.push(char::from(HEX[usize::from(byte & 0x0f)]));
+                }
+                output
+            });
+
+        let url_path = if cfg!(windows) {
+            if encoded_path.starts_with("//") {
+                format!("file:{}", encoded_path)
+            } else {
+                format!("file:///{}", encoded_path)
+            }
+        } else {
+            format!("file://{}", encoded_path)
+        };
+        Self(format!("{url_path}?v={}", timestamp()))
     }
 }
 
