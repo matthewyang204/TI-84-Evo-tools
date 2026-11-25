@@ -24,5 +24,6 @@ qt-build-utils = { path = "vendor/qt-build-utils" }
 [package.metadata.bundle]
 name = "TI-84 Toolbox"
 identifier = "com.matthewyang204.ti-evo-tools"  # reverse‑DNS, used as CFBundleIdentifier
+icon = ["assets/main-icon.icns"]
 description = "A client for TI-84 Evo calculators, written with Qt and Rust and designed to be performant on slow computers"
 copyright = "© NomadTax 2026\n© Matthew Yang (杨佳明)"
