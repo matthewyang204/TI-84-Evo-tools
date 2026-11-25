@@ -10,9 +10,17 @@ fn main() {
             .expect("failed to embed the Windows application icon");
     }
 
-    CxxQtBuilder::new_qml_module(QmlModule::new("org.example.tiscreen").qml_file("qml/Main.qml"))
-        .qt_module("Network")
-        .files(["src/backend.rs"])
-        .cpp_files(["src/clipboard.cpp", "src/seticon.cpp"])
-        .build();
+    let mut builder = CxxQtBuilder::new_qml_module(
+        QmlModule::new("org.example.tiscreen").qml_file("qml/Main.qml"),
+    )
+    .qt_module("Network")
+    .files(["src/backend.rs"])
+    .cpp_files(["src/clipboard.cpp"]);
+
+    #[cfg(windows)]
+    {
+        builder = builder.cpp_file("src/seticon.cpp");
+    }
+
+    builder.build();
 }

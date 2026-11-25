@@ -6,6 +6,7 @@ pub mod ffi {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         include!("ti-evo-tools/src/clipboard.h");
+        #[cfg(windows)]
         include!("ti-evo-tools/src/seticon.h");
         type QString = cxx_qt_lib::QString;
 
@@ -13,6 +14,7 @@ pub mod ffi {
         fn copy_text_to_clipboard(text: &QString);
         fn clipboard_file_path() -> QString;
         fn clipboard_text() -> QString;
+        #[cfg(windows)]
         fn set_application_icon_from_exe_resource();
     }
 
