@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+QT_PLUGIN_PATH="$SCRIPT_DIR/usr/plugins" QML2_IMPORT_PATH="$SCRIPT_DIR/usr/qml" $SCRIPT_DIR/bin/ti-evo-tools
