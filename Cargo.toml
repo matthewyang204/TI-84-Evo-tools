@@ -29,12 +29,11 @@ name = "TI-84 Toolbox"
 identifier = "com.matthewyang204.ti-evo-tools"  # reverse‑DNS, used as CFBundleIdentifier
 icon = ["assets/main-icon.icns"]
 description = "A client for TI-84 Evo calculators, written with Qt and Rust and designed to be performant on slow computers"
-copyright = "© NomadTax 2026\n© Matthew Yang (杨佳明) 2026"
+copyright = "© NomadTax 2026; © Matthew Yang (杨佳明) 2026"
 
 # FileDescription, ProductName, ProductVersion, OriginalFilename and LegalCopyright
 [package.metadata.winres]
 ProductName = "TI-84 Toolbox"
-ProductVersion = version
 FileDescription = "A client for TI-84 Evo calculators, written with Qt and Rust and designed to be performant on slow computers"
-OriginalFilename = "TI-EVO-TOOLS.exe"
-LegalCopyright = "© NomadTax 2026\n© Matthew Yang (杨佳明) 2026"
+OriginalFilename = "TI-EVO-TOOLS.EXE"
+LegalCopyright = "© NomadTax 2026; © Matthew Yang (杨佳明) 2026"

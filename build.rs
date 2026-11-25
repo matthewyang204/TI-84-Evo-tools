@@ -5,6 +5,7 @@ fn main() {
     {
         let mut resources = winres::WindowsResource::new();
         resources.set_icon("assets/main-icon.ico");
+        resources.set("ProductVersion", env!("CARGO_PKG_VERSION"));
         resources
             .compile()
             .expect("failed to embed the Windows application icon");
