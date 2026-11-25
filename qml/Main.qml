@@ -11,7 +11,7 @@ Controls.ApplicationWindow {
     minimumWidth: 420
     minimumHeight: 360
     visible: true
-    title: qsTr("TI-84 Evo Calculator Toolbox")
+    title: qsTr("TI-84 Evo Calculator Toolbox 1.0.0")
 
     CaptureBackend { id: backend }
     property var pendingUploads: []
