@@ -7,9 +7,11 @@ cargo install --path . --root target/prefix
 echo "Deploying program..."
 linuxdeploy/deploy.sh
 
-echo "Patching and packaging program..."
-patchelf --set-rpath '$ORIGIN/../lib' target/prefix/bin/ti-evo-tools
-cp linuxdeploy/launcher target/prefix/ti-evo-tools
+echo "Patching program..."
+linuxdeploy/postdeploy1.sh
+
+printf "Finishing..."
 chmod +x target/prefix/ti-evo-tools
+echo "done"
 
 echo "Built and staged to target/prefix/ti-evo-tools!"
