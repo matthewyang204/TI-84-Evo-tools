@@ -24,4 +24,5 @@ fi
 
 # Run the deployment tool
 echo "Deploying..."
+export LD_LIBRARY_PATH="$(${QMAKE:-/usr/bin/qmake} -query QT_INSTALL_LIBS | head -n 1)${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 QMAKE=${QMAKE:-/usr/bin/qmake} QML_SOURCES_PATHS="$PWD/qml" target/tools/linuxdeploy-x86_64.AppImage --plugin qt --executable=target/prefix/bin/ti-evo-tools --appdir=target/prefix
