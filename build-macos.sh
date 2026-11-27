@@ -39,11 +39,11 @@ if [[ "$CARGO_BUILD_TARGET" =~ ^(x86_64|aarch64)-apple-darwin$ ]]; then
     fi
 fi
 cargo bundle --release $TARGETARG
-macdeployqt "target/release/bundle/osx/TI-84 Toolbox.app" -qmldir=./qml -always-overwrite
+macdeployqt "target/$CARGO_BUILD_TARGET/release/bundle/osx/TI-84 Toolbox.app" -qmldir=./qml -always-overwrite
 
 mkdir -p $OLDPWD/target/bundle
 rm -rf "$OLDPWD/target/bundle/TI-84 Toolbox.app"
-cp -r "target/release/bundle/osx/TI-84 Toolbox.app" "$OLDPWD/target/bundle/"
+cp -r "target/$CARGO_BUILD_TARGET/release/bundle/osx/TI-84 Toolbox.app" "$OLDPWD/target/bundle/"
 cd -
 echo "Built and staged to target/bundle/TI-84 Toolbox.app!"
 
