@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eo pipefail
 
 TEMPDIR=/tmp/build-ti-evo-tools-$(head -c 32 /dev/urandom | shasum -a 256 | awk '{print $1}')
 mkdir -p $TEMPDIR
@@ -27,7 +27,18 @@ if [[ " $* " == *" --deploy-oem204 "* ]]; then
 fi
 
 echo "Compiling program..."
-cargo bundle --release
+TARGETARG=""
+if [[ "$CARGO_BUILD_TARGET" =~ ^(x86_64|aarch64)-apple-darwin$ ]]; then
+    TARGET_ARCH="${BASH_REMATCH[1]}"
+    [ "$TARGET_ARCH" = "aarch64" ] && TARGET_ARCH="arm64"
+
+    if [ "$(uname -m)" != "$TARGET_ARCH" ]; then
+        TARGETARG+=" --target $CARGO_BUILD_TARGET"
+        CFLAGS+=" -arch $TARGET_ARCH"
+        CXXFLAGS+=" -arch $TARGET_ARCH"
+    fi
+fi
+cargo bundle --release $TARGETARG
 macdeployqt "target/release/bundle/osx/TI-84 Toolbox.app" -qmldir=./qml -always-overwrite
 
 mkdir -p $OLDPWD/target/bundle
